@@ -1,0 +1,58 @@
+@page "/add-user"
+@inject IUserService UserService
+@inject NavigationManager Nav
+
+<PageTitle>Add User &mdash; UserHub</PageTitle>
+
+<div class="page-wrapper page-narrow">
+    <div class="page-header">
+        <h1>&#x2795; Add New User</h1>
+        <a href="/users" class="btn btn-secondary">&#x2190; Back to Users</a>
+    </div>
+
+    @if (_success)
+    {
+        <div class="alert-success">
+            <strong>&#x2705; User created!</strong> <a href="/users">View all users</a> or add another below.
+        </div>
+    }
+
+    <UserForm Model="@_model"
+              OnSubmit="HandleSubmit"
+              OnCancel="GoBack"
+              SubmitText="Create User"
+              IsBusy="@_saving"
+              ErrorMessage="@_error" />
+</div>
+
+@code {
+    private UserDetail _model = new();
+    private bool _saving;
+    private bool _success;
+    private string _error = string.Empty;
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("/users");
+    }
+
+    private async Task HandleSubmit(UserDetail user)
+    {
+        _saving = true;
+        _success = false;
+        _error = string.Empty;
+
+        var (ok, data, err) = await UserService.CreateAsync(user);
+        _saving = false;
+
+        if (ok)
+        {
+            _success = true;
+            _model = new UserDetail();
+        }
+        else
+        {
+            _error = string.IsNullOrEmpty(err) ? "Failed to create user. Please try again." : err;
+        }
+    }
+}

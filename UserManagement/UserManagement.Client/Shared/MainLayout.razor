@@ -1,0 +1,95 @@
+@inherits LayoutComponentBase
+@inject NotificationService NotifService
+@inject NavigationManager Nav
+@implements IAsyncDisposable
+
+<div class="app-shell">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-logo">
+            <span class="logo-icon">&#x1F465;</span>
+            <span class="logo-text">UserHub</span>
+        </div>
+        <ul class="nav-menu">
+            <li>
+                <NavLink href="/" Match="NavLinkMatch.All" class="nav-item">
+                    <span class="nav-icon">&#x1F3E0;</span>
+                    <span>Home</span>
+                </NavLink>
+            </li>
+            <li>
+                <NavLink href="/users" class="nav-item">
+                    <span class="nav-icon">&#x1F465;</span>
+                    <span>Users</span>
+                </NavLink>
+            </li>
+            <li>
+                <NavLink href="/add-user" class="nav-item">
+                    <span class="nav-icon">&#x2795;</span>
+                    <span>Add User</span>
+                </NavLink>
+            </li>
+            <li>
+                <NavLink href="/dashboard" class="nav-item">
+                    <span class="nav-icon">&#x1F4CA;</span>
+                    <span>Dashboard</span>
+                </NavLink>
+            </li>
+        </ul>
+        <div class="sidebar-footer">
+            <div class="connection-badge @(NotifService.IsConnected ? "online" : "offline")">
+                <span class="dot"></span>
+                <span>@(NotifService.IsConnected ? "Live" : "Offline")</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main -->
+    <div class="main-area">
+        <!-- Toast notifications -->
+        @if (_toasts.Count > 0)
+        {
+            <div class="toast-container">
+                @foreach (var t in _toasts)
+                {
+                    <div class="toast toast-@t.Action.ToLower()">
+                        <strong>@t.Action</strong> &mdash; @t.Message
+                    </div>
+                }
+            </div>
+        }
+
+        <main class="page-content">
+            @Body
+        </main>
+    </div>
+</div>
+
+@code {
+    private List<UserNotification> _toasts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        NotifService.OnNotification += HandleNotification;
+        NotifService.OnConnectionChanged += () => InvokeAsync(StateHasChanged);
+        await NotifService.ConnectAsync(Nav.BaseUri);
+    }
+
+    private void HandleNotification(UserNotification n)
+    {
+        InvokeAsync(async () =>
+        {
+            _toasts.Add(n);
+            StateHasChanged();
+            await Task.Delay(4000);
+            _toasts.Remove(n);
+            StateHasChanged();
+        });
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        NotifService.OnNotification -= HandleNotification;
+        await NotifService.DisposeAsync();
+    }
+}

@@ -1,0 +1,161 @@
+@page "/"
+@inject IUserService UserService
+@inject NavigationManager Nav
+
+<PageTitle>UserHub &mdash; Home</PageTitle>
+
+<div class="home-page">
+
+    <!-- HERO: one SVG illustration (the single image for homepage) -->
+    <section class="hero-section">
+        <div class="hero-text">
+            <h1 class="hero-title">Welcome to <span class="accent">UserHub</span></h1>
+            <p class="hero-sub">
+                A full-stack Blazor WebAssembly app with real-time SignalR updates,
+                form validation, CRUD operations, and live dashboard analytics.
+            </p>
+            <div class="hero-btns">
+                <button class="btn btn-primary btn-lg" @onclick='() => Nav.NavigateTo("/users")'>
+                    &#x1F465; View Users
+                </button>
+                <button class="btn btn-outline btn-lg" @onclick='() => Nav.NavigateTo("/add-user")'>
+                    &#x2795; Add User
+                </button>
+            </div>
+        </div>
+        <div class="hero-art">
+            <!-- Single homepage SVG illustration -->
+            <svg viewBox="0 0 420 310" xmlns="http://www.w3.org/2000/svg" class="hero-svg" aria-label="User management illustration">
+                <defs>
+                    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+                    </linearGradient>
+                    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+                        <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#00000020"/>
+                    </filter>
+                </defs>
+                <!-- Background circle -->
+                <circle cx="210" cy="155" r="140" fill="url(#grad1)" opacity="0.08" />
+
+                <!-- Card 1 -->
+                <rect x="20" y="70" width="160" height="90" rx="14" fill="white" filter="url(#shadow)" stroke="#e0e7ff" stroke-width="1.5"/>
+                <circle cx="55" cy="108" r="20" fill="#667eea"/>
+                <text x="55" y="115" text-anchor="middle" fill="white" font-size="16" font-weight="bold" font-family="sans-serif">A</text>
+                <rect x="84" y="95" width="80" height="8" rx="4" fill="#667eea" opacity="0.6"/>
+                <rect x="84" y="110" width="60" height="6" rx="3" fill="#c7d2fe"/>
+                <rect x="84" y="122" width="70" height="6" rx="3" fill="#e0e7ff"/>
+                <rect x="20" y="147" width="160" height="13" rx="0 0 14 14" fill="#667eea" opacity="0.12"/>
+                <text x="100" y="158" text-anchor="middle" fill="#667eea" font-size="9" font-family="sans-serif" font-weight="600">ENGINEERING</text>
+
+                <!-- Card 2 -->
+                <rect x="240" y="40" width="160" height="90" rx="14" fill="white" filter="url(#shadow)" stroke="#fef3c7" stroke-width="1.5"/>
+                <circle cx="275" cy="78" r="20" fill="#f59e0b"/>
+                <text x="275" y="85" text-anchor="middle" fill="white" font-size="16" font-weight="bold" font-family="sans-serif">B</text>
+                <rect x="304" y="65" width="80" height="8" rx="4" fill="#f59e0b" opacity="0.6"/>
+                <rect x="304" y="80" width="60" height="6" rx="3" fill="#fde68a"/>
+                <rect x="304" y="92" width="70" height="6" rx="3" fill="#fef3c7"/>
+                <rect x="240" y="117" width="160" height="13" rx="0 0 14 14" fill="#f59e0b" opacity="0.12"/>
+                <text x="320" y="128" text-anchor="middle" fill="#d97706" font-size="9" font-family="sans-serif" font-weight="600">DESIGN</text>
+
+                <!-- Card 3 -->
+                <rect x="130" y="185" width="160" height="90" rx="14" fill="white" filter="url(#shadow)" stroke="#d1fae5" stroke-width="1.5"/>
+                <circle cx="165" cy="223" r="20" fill="#10b981"/>
+                <text x="165" y="230" text-anchor="middle" fill="white" font-size="16" font-weight="bold" font-family="sans-serif">C</text>
+                <rect x="194" y="210" width="80" height="8" rx="4" fill="#10b981" opacity="0.6"/>
+                <rect x="194" y="225" width="60" height="6" rx="3" fill="#a7f3d0"/>
+                <rect x="194" y="237" width="70" height="6" rx="3" fill="#d1fae5"/>
+                <rect x="130" y="262" width="160" height="13" rx="0 0 14 14" fill="#10b981" opacity="0.12"/>
+                <text x="210" y="273" text-anchor="middle" fill="#059669" font-size="9" font-family="sans-serif" font-weight="600">PRODUCT</text>
+
+                <!-- Connecting lines -->
+                <line x1="180" y1="115" x2="240" y2="90" stroke="#667eea" stroke-width="1.5" stroke-dasharray="5,4" opacity="0.35"/>
+                <line x1="210" y1="160" x2="210" y2="185" stroke="#10b981" stroke-width="1.5" stroke-dasharray="5,4" opacity="0.35"/>
+
+                <!-- Live pill -->
+                <rect x="160" y="288" width="100" height="22" rx="11" fill="#667eea"/>
+                <circle cx="178" cy="299" r="5" fill="#4ade80"/>
+                <text x="191" y="304" fill="white" font-size="10" font-family="sans-serif" font-weight="700">LIVE SYNC</text>
+            </svg>
+        </div>
+    </section>
+
+    <!-- Stats -->
+    @if (_stats != null)
+    {
+        <section class="stats-row">
+            <div class="stat-box">
+                <div class="stat-value">@_stats.Total</div>
+                <div class="stat-name">Total Users</div>
+            </div>
+            <div class="stat-box stat-green">
+                <div class="stat-value">@_stats.Active</div>
+                <div class="stat-name">Active</div>
+            </div>
+            <div class="stat-box stat-red">
+                <div class="stat-value">@_stats.Inactive</div>
+                <div class="stat-name">Inactive</div>
+            </div>
+            <div class="stat-box stat-purple">
+                <div class="stat-value">@_stats.AverageAge</div>
+                <div class="stat-name">Avg Age</div>
+            </div>
+            <div class="stat-box stat-amber">
+                <div class="stat-value">@_stats.ByDepartment.Count</div>
+                <div class="stat-name">Departments</div>
+            </div>
+        </section>
+    }
+    else if (_loading)
+    {
+        <div class="loading-row">Loading statistics...</div>
+    }
+
+    <!-- Feature tiles -->
+    <section class="features-section">
+        <h2 class="section-title">What's included</h2>
+        <div class="features-grid">
+            <div class="feature-tile">
+                <div class="feature-ico">&#x26A1;</div>
+                <h4>Real-Time SignalR</h4>
+                <p>All changes broadcast live to every connected browser via SignalR hub.</p>
+            </div>
+            <div class="feature-tile">
+                <div class="feature-ico">&#x2705;</div>
+                <h4>Form Validation</h4>
+                <p>EditForm with DataAnnotationsValidator — both client and server side.</p>
+            </div>
+            <div class="feature-tile">
+                <div class="feature-ico">&#x1F50D;</div>
+                <h4>Search &amp; Filter</h4>
+                <p>Filter users by name, department and active status in real time.</p>
+            </div>
+            <div class="feature-tile">
+                <div class="feature-ico">&#x1F4CA;</div>
+                <h4>Live Dashboard</h4>
+                <p>Stats and department bar chart updated whenever users change.</p>
+            </div>
+            <div class="feature-tile">
+                <div class="feature-ico">&#x1F501;</div>
+                <h4>Full CRUD</h4>
+                <p>Create, read, update, delete — with optimistic UI and confirm dialog.</p>
+            </div>
+            <div class="feature-tile">
+                <div class="feature-ico">&#x1F5C3;&#xFE0F;</div>
+                <h4>EF Core InMemory</h4>
+                <p>Data layer uses Entity Framework Core with an in-memory database.</p>
+            </div>
+        </div>
+    </section>
+</div>
+
+@code {
+    private UserStats? _stats;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _stats = await UserService.GetStatsAsync();
+        _loading = false;
+    }
+}

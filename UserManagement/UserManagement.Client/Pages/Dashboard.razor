@@ -1,0 +1,173 @@
+@page "/dashboard"
+@inject IUserService UserService
+@inject NotificationService NotifService
+@implements IDisposable
+
+<PageTitle>Dashboard &mdash; UserHub</PageTitle>
+
+<div class="page-wrapper">
+    <div class="page-header">
+        <h1>&#x1F4CA; Dashboard</h1>
+        <button class="btn btn-outline" @onclick="Refresh">&#x21BB; Refresh</button>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="loading-state">
+            <div class="spinner-lg"></div>
+            <p>Loading dashboard...</p>
+        </div>
+    }
+    else if (_stats == null)
+    {
+        <div class="empty-state">Could not load statistics.</div>
+    }
+    else
+    {
+        <!-- Summary Cards -->
+        <div class="dash-stats">
+            <div class="dash-stat-card primary">
+                <div class="ds-icon">&#x1F465;</div>
+                <div class="ds-data">
+                    <div class="ds-value">@_stats.Total</div>
+                    <div class="ds-label">Total Users</div>
+                </div>
+            </div>
+            <div class="dash-stat-card green">
+                <div class="ds-icon">&#x2705;</div>
+                <div class="ds-data">
+                    <div class="ds-value">@_stats.Active</div>
+                    <div class="ds-label">Active</div>
+                </div>
+            </div>
+            <div class="dash-stat-card red">
+                <div class="ds-icon">&#x26D4;</div>
+                <div class="ds-data">
+                    <div class="ds-value">@_stats.Inactive</div>
+                    <div class="ds-label">Inactive</div>
+                </div>
+            </div>
+            <div class="dash-stat-card purple">
+                <div class="ds-icon">&#x1F382;</div>
+                <div class="ds-data">
+                    <div class="ds-value">@_stats.AverageAge</div>
+                    <div class="ds-label">Avg Age</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dash-grid">
+            <!-- Bar Chart (pure CSS/SVG) -->
+            <div class="dash-panel">
+                <h3>Users by Department</h3>
+                @if (_stats.ByDepartment.Count > 0)
+                {
+                    var max = _stats.ByDepartment.Max(d => d.Count);
+                    <div class="bar-chart">
+                        @foreach (var dept in _stats.ByDepartment)
+                        {
+                            var pct = max > 0 ? (dept.Count * 100.0 / max) : 0;
+                            <div class="bar-row">
+                                <span class="bar-label">@dept.Department</span>
+                                <div class="bar-track">
+                                    <div class="bar-fill" style="width:@pct%"></div>
+                                </div>
+                                <span class="bar-count">@dept.Count</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Department Table -->
+            <div class="dash-panel">
+                <h3>Department Breakdown</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Department</th>
+                            <th>Users</th>
+                            <th>Share</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var dept in _stats.ByDepartment)
+                        {
+                            var share = _stats.Total > 0 ? Math.Round(dept.Count * 100.0 / _stats.Total, 1) : 0;
+                            <tr>
+                                <td>@dept.Department</td>
+                                <td><strong>@dept.Count</strong></td>
+                                <td>
+                                    <div class="pct-bar">
+                                        <div class="pct-fill" style="width:@share%"></div>
+                                        <span>@share%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Active vs Inactive donut (CSS) -->
+        <div class="dash-panel donut-panel">
+            <h3>Active vs Inactive</h3>
+            <div class="donut-chart">
+                @{
+                    var activePct = _stats.Total > 0 ? Math.Round(_stats.Active * 100.0 / _stats.Total) : 0;
+                    var inactivePct = 100 - activePct;
+                    var stroke = 62.8; // 2*pi*10 ~circumference for r=10
+                    var activeDash = activePct * stroke / 100;
+                    var inactiveDash = stroke - activeDash;
+                }
+                <svg viewBox="0 0 42 42" class="donut-svg">
+                    <circle cx="21" cy="21" r="10" fill="none" stroke="#e0e7ff" stroke-width="4"/>
+                    <circle cx="21" cy="21" r="10" fill="none" stroke="#667eea" stroke-width="4"
+                            stroke-dasharray="@activeDash.ToString("F1") @inactiveDash.ToString("F1")"
+                            stroke-dashoffset="15.7"
+                            transform="rotate(-90 21 21)"/>
+                </svg>
+                <div class="donut-legend">
+                    <span class="legend-dot" style="background:#667eea"></span> Active: @_stats.Active (@activePct%)
+                    <br />
+                    <span class="legend-dot" style="background:#e0e7ff"></span> Inactive: @_stats.Inactive (@inactivePct%)
+                </div>
+            </div>
+        </div>
+
+        <p class="last-updated">Last updated: @_lastUpdated.ToLocalTime().ToString("HH:mm:ss")</p>
+    }
+</div>
+
+@code {
+    private UserStats? _stats;
+    private bool _loading = true;
+    private DateTime _lastUpdated;
+
+    protected override async Task OnInitializedAsync()
+    {
+        NotifService.OnNotification += HandleNotification;
+        await Refresh();
+    }
+
+    private async Task Refresh()
+    {
+        _loading = true;
+        StateHasChanged();
+        _stats = await UserService.GetStatsAsync();
+        _lastUpdated = DateTime.UtcNow;
+        _loading = false;
+    }
+
+    private void HandleNotification(UserNotification n)
+    {
+        if (n.Action is "Added" or "Updated" or "Deleted")
+            InvokeAsync(Refresh);
+    }
+
+    public void Dispose()
+    {
+        NotifService.OnNotification -= HandleNotification;
+    }
+}

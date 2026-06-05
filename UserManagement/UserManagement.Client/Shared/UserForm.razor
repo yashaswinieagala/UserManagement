@@ -1,0 +1,109 @@
+@using Microsoft.AspNetCore.Components.Forms
+
+<EditForm Model="@Model" OnValidSubmit="HandleValidSubmit" OnInvalidSubmit="HandleInvalidSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="form-card">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Username <span class="req">*</span></label>
+                <InputText class="form-input"
+                           @bind-Value="Model.UserName"
+                           placeholder="e.g. john_doe" />
+                <ValidationMessage For="@(() => Model.UserName)" class="field-error" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Email Address <span class="req">*</span></label>
+                <InputText class="form-input"
+                           @bind-Value="Model.Email"
+                           placeholder="e.g. john@example.com" />
+                <ValidationMessage For="@(() => Model.Email)" class="field-error" />
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Age <span class="req">*</span></label>
+                <InputNumber class="form-input"
+                             @bind-Value="Model.Age"
+                             placeholder="e.g. 28" />
+                <ValidationMessage For="@(() => Model.Age)" class="field-error" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Department <span class="req">*</span></label>
+                <InputSelect class="form-input form-select"
+                             @bind-Value="Model.Department">
+                    <option value="">-- Select Department --</option>
+                    @foreach (var d in Departments)
+                    {
+                        <option value="@d">@d</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="@(() => Model.Department)" class="field-error" />
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group form-group-check">
+                <label class="check-label">
+                    <InputCheckbox @bind-Value="Model.IsActive" class="check-input" />
+                    <span>Active User</span>
+                </label>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="alert-error">@ErrorMessage</div>
+        }
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" disabled="@IsBusy">
+                @if (IsBusy)
+                {
+                    <span class="spinner-sm"></span>
+                    <span>Saving...</span>
+                }
+                else
+                {
+                    <span>@SubmitText</span>
+                }
+            </button>
+            <button type="button" class="btn btn-secondary" @onclick="OnCancelClicked" disabled="@IsBusy">
+                Cancel
+            </button>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter] public UserDetail Model { get; set; } = new();
+    [Parameter] public List<string> Departments { get; set; } = DefaultDepartments;
+    [Parameter] public EventCallback<UserDetail> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public string SubmitText { get; set; } = "Save";
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public string ErrorMessage { get; set; } = string.Empty;
+
+    private static List<string> DefaultDepartments = new()
+    {
+        "Engineering", "Design", "Product", "QA", "HR", "Marketing", "Sales", "Finance"
+    };
+
+    private async Task HandleValidSubmit()
+    {
+        await OnSubmit.InvokeAsync(Model);
+    }
+
+    private void HandleInvalidSubmit()
+    {
+        // Validation errors shown by ValidationMessage components automatically
+    }
+
+    private async Task OnCancelClicked()
+    {
+        await OnCancel.InvokeAsync();
+    }
+}

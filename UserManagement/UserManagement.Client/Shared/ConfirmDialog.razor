@@ -1,0 +1,25 @@
+@if (Visible)
+{
+    <div class="modal-backdrop" @onclick="CancelClicked">
+        <div class="modal-box" @onclick:stopPropagation="true">
+            <h3 class="modal-title">@Title</h3>
+            <p class="modal-body">@Message</p>
+            <div class="modal-footer">
+                <button class="btn btn-danger" @onclick="ConfirmClicked">@ConfirmLabel</button>
+                <button class="btn btn-secondary" @onclick="CancelClicked">Cancel</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public string Title { get; set; } = "Confirm";
+    [Parameter] public string Message { get; set; } = "Are you sure?";
+    [Parameter] public string ConfirmLabel { get; set; } = "Delete";
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private async Task ConfirmClicked() => await OnConfirm.InvokeAsync();
+    private async Task CancelClicked() => await OnCancel.InvokeAsync();
+}

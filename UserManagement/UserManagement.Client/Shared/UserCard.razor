@@ -1,0 +1,43 @@
+<div class="user-card @(User.IsActive ? "" : "inactive-card")">
+    <div class="card-header">
+        <div class="avatar" style="background:@GetAvatarColor(User.UserName)">
+            @(User.UserName.Length > 0 ? char.ToUpper(User.UserName[0]).ToString() : "?")
+        </div>
+        <div class="card-title">
+            <h3>@User.UserName</h3>
+            <span class="dept-badge">@User.Department</span>
+        </div>
+        <span class="status-pill @(User.IsActive ? "pill-active" : "pill-inactive")">
+            @(User.IsActive ? "Active" : "Inactive")
+        </span>
+    </div>
+    <div class="card-body">
+        <p><span class="info-icon">&#x2709;&#xFE0F;</span> @User.Email</p>
+        <p><span class="info-icon">&#x1F382;</span> Age: @User.Age</p>
+        <p><span class="info-icon">&#x1F4C5;</span> Joined: @User.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</p>
+    </div>
+    @if (ShowActions)
+    {
+        <div class="card-actions">
+            <button class="btn btn-sm btn-outline" @onclick="EditClicked">&#x270F;&#xFE0F; Edit</button>
+            <button class="btn btn-sm btn-danger" @onclick="DeleteClicked">&#x1F5D1;&#xFE0F; Delete</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public UserDetail User { get; set; } = new();
+    [Parameter] public bool ShowActions { get; set; } = true;
+    [Parameter] public EventCallback<UserDetail> OnEdit { get; set; }
+    [Parameter] public EventCallback<int> OnDelete { get; set; }
+
+    private async Task EditClicked() => await OnEdit.InvokeAsync(User);
+    private async Task DeleteClicked() => await OnDelete.InvokeAsync(User.Id);
+
+    private static string GetAvatarColor(string name)
+    {
+        var colors = new[] { "#667eea", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316" };
+        var idx = name.Length > 0 ? Math.Abs(name[0]) % colors.Length : 0;
+        return colors[idx];
+    }
+}

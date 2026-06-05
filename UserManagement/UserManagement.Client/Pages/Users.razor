@@ -1,0 +1,226 @@
+@page "/users"
+@inject IUserService UserService
+@inject NotificationService NotifService
+@implements IDisposable
+
+<PageTitle>Users &mdash; UserHub</PageTitle>
+
+<div class="page-wrapper">
+    <div class="page-header">
+        <h1>All Users</h1>
+        <a href="/add-user" class="btn btn-primary">&#x2795; Add User</a>
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div class="filter-bar">
+        <!-- Use oninput directly (no @bind) to avoid duplicate event conflict -->
+        <input class="form-input search-input"
+               type="text"
+               placeholder="&#x1F50D; Search by name or email..."
+               value="@_searchTerm"
+               @oninput="OnSearchInput" />
+
+        <select class="form-input form-select dept-select"
+                value="@_filterDept"
+                @onchange="OnDeptChanged">
+            <option value="">All Departments</option>
+            @foreach (var d in _departments)
+            {
+                <option value="@d">@d</option>
+            }
+        </select>
+
+        <select class="form-input form-select status-select"
+                value="@_filterActive"
+                @onchange="OnStatusChanged">
+            <option value="">All Status</option>
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+        </select>
+
+        <button class="btn btn-outline" @onclick="ApplyFilters">Search</button>
+        <button class="btn btn-secondary" @onclick="ClearFilters">Clear</button>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="loading-state">
+            <div class="spinner-lg"></div>
+            <p>Loading users...</p>
+        </div>
+    }
+    else if (_users.Count == 0)
+    {
+        <div class="empty-state">
+            <p>&#x1F4C2; No users found. <a href="/add-user">Add the first one</a>.</p>
+        </div>
+    }
+    else
+    {
+        <div class="results-info">Showing @_users.Count user(s)</div>
+        <div class="users-grid">
+            @foreach (var user in _users)
+            {
+                <UserCard User="@user"
+                          OnEdit="OpenEditModal"
+                          OnDelete="OpenDeleteConfirm" />
+            }
+        </div>
+    }
+</div>
+
+<!-- Edit Modal -->
+@if (_showEditModal && _editUser != null)
+{
+    <div class="modal-backdrop" @onclick="CloseEditModal">
+        <div class="modal-large" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h2>Edit User</h2>
+                <button class="btn-close" @onclick="CloseEditModal">&times;</button>
+            </div>
+            <UserForm Model="@_editUser"
+                      OnSubmit="HandleEdit"
+                      OnCancel="CloseEditModal"
+                      SubmitText="Update User"
+                      IsBusy="@_saving"
+                      ErrorMessage="@_editError" />
+        </div>
+    </div>
+}
+
+<!-- Delete Confirm -->
+<ConfirmDialog Visible="@_showDeleteConfirm"
+               Title="Delete User"
+               Message="@_deleteMessage"
+               ConfirmLabel="Yes, Delete"
+               OnConfirm="HandleDelete"
+               OnCancel="CloseDeleteConfirm" />
+
+@code {
+    private List<UserDetail> _users = new();
+    private List<string> _departments = new();
+    private bool _loading = true;
+    private string _searchTerm = string.Empty;
+    private string _filterDept = string.Empty;
+    private string _filterActive = string.Empty;
+
+    private bool _showEditModal;
+    private UserDetail? _editUser;
+    private bool _saving;
+    private string _editError = string.Empty;
+
+    private bool _showDeleteConfirm;
+    private int _deleteUserId;
+    private string _deleteMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        NotifService.OnNotification += HandleSignalRNotification;
+        _departments = await UserService.GetDepartmentsAsync();
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        _loading = true;
+        StateHasChanged();
+        bool? active = _filterActive == "true" ? true : _filterActive == "false" ? false : null;
+        _users = await UserService.SearchAsync(_searchTerm, _filterDept, active);
+        _loading = false;
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private void OnDeptChanged(ChangeEventArgs e)
+    {
+        _filterDept = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private void OnStatusChanged(ChangeEventArgs e)
+    {
+        _filterActive = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task ApplyFilters() => await LoadUsers();
+
+    private async Task ClearFilters()
+    {
+        _searchTerm = string.Empty;
+        _filterDept = string.Empty;
+        _filterActive = string.Empty;
+        await LoadUsers();
+    }
+
+    private void OpenEditModal(UserDetail user)
+    {
+        _editUser = new UserDetail
+        {
+            Id = user.Id,
+            UserName = user.UserName,
+            Email = user.Email,
+            Age = user.Age,
+            Department = user.Department,
+            IsActive = user.IsActive,
+            CreatedAt = user.CreatedAt
+        };
+        _editError = string.Empty;
+        _showEditModal = true;
+    }
+
+    private void CloseEditModal()
+    {
+        _showEditModal = false;
+        _editUser = null;
+    }
+
+    private async Task HandleEdit(UserDetail updated)
+    {
+        _saving = true;
+        _editError = string.Empty;
+        var (ok, data, err) = await UserService.UpdateAsync(updated.Id, updated);
+        _saving = false;
+        if (ok)
+        {
+            _showEditModal = false;
+            await LoadUsers();
+        }
+        else
+        {
+            _editError = string.IsNullOrEmpty(err) ? "Update failed. Please try again." : err;
+        }
+    }
+
+    private void OpenDeleteConfirm(int id)
+    {
+        var user = _users.FirstOrDefault(u => u.Id == id);
+        _deleteUserId = id;
+        _deleteMessage = $"Are you sure you want to delete '{user?.UserName ?? "this user"}'? This cannot be undone.";
+        _showDeleteConfirm = true;
+    }
+
+    private void CloseDeleteConfirm()
+    {
+        _showDeleteConfirm = false;
+    }
+
+    private async Task HandleDelete()
+    {
+        _showDeleteConfirm = false;
+        await UserService.DeleteAsync(_deleteUserId);
+        await LoadUsers();
+    }
+
+    private void HandleSignalRNotification(UserNotification n)
+    {
+        if (n.Action is "Added" or "Updated" or "Deleted")
+            InvokeAsync(LoadUsers);
+    }
+
+    public void Dispose()
+    {
+        NotifService.OnNotification -= HandleSignalRNotification;
+    }
+}
